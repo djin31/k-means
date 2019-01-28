@@ -9,7 +9,7 @@ vector<coord> dataset = vector<coord>();
 
 int k=0;
 int n=0;
-int max_iter = 100;
+int max_iter = 1000;
 
 int reinit_param = 10;
 
@@ -46,7 +46,7 @@ vector<vector<coord>> k_means_seq(){
 		means[i].z=dataset[i].z;
 	}
 
-	vector<int> nearest_mean = vector<int>(n);
+	vector<pair<int,float>> nearest_mean = vector<pair<int,float>>(n);
 	float temp_dist, min_dist;
 	int min_dist_mean;
 
@@ -74,10 +74,10 @@ vector<vector<coord>> k_means_seq(){
 					min_dist_mean = m;
 				}
 			} 
-			nearest_mean[p] = min_dist_mean;
+			nearest_mean[p] = pair<int,float>(min_dist_mean,min_dist);
 		}
 		for (int p=0;p<n;p++){
-			clusters[nearest_mean[p]].push_back(dataset[p]);
+			clusters[nearest_mean[p].first].push_back(dataset[p]);
 		}
 
 		//  Calculate new means
@@ -95,9 +95,25 @@ vector<vector<coord>> k_means_seq(){
 			}
 			// cerr<<c<<" --> "<< means[c].x <<" " <<means[c].y <<" "<< means[c].z<<endl;
 			else{
-				means[c].x = rand()%(int)(max_x-min_x) + min_x;
-				means[c].y = rand()%(int)(max_y-min_y) + min_y;
-				means[c].z = rand()%(int)(max_z-min_z) + min_z;
+				if (rand()%2==0){
+					int max_dist_point;
+					float max_dist=-1;
+					for (int i=0;i<n;i++){
+						if (nearest_mean[i].second>max_dist){
+							max_dist_point = i;
+							max_dist = nearest_mean[i].second;
+						}
+					}
+					means[c] = dataset[max_dist_point];
+					nearest_mean[max_dist_point].second = 0;
+					nearest_mean[max_dist_point].first  = c;
+				}
+				else{
+					means[c].x = rand()%(int)(max_x-min_x) + min_x;
+					means[c].y = rand()%(int)(max_y-min_y) + min_y;
+					means[c].z = rand()%(int)(max_z-min_z) + min_z;
+				}
+
 			}
 		}
 		// cerr<<"Cluster sizes are\n";

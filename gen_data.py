@@ -9,7 +9,7 @@ x_l = []
 y_l = []
 z_l = []
 
-coord_range = 100
+coord_range = 1000
 dev_range = 10
 
 f = open("test" + str(k) + ".txt","w")
