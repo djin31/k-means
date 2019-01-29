@@ -89,13 +89,13 @@ vector<vector<coord>> k_means_seq(){
 					means[c].y+=clusters[c][p].y;
 					means[c].z+=clusters[c][p].z;
 				}
-				means[c].x/=n;
-				means[c].y/=n;
-				means[c].z/=n; 
+				means[c].x/=clusters[c].size();
+				means[c].y/=clusters[c].size();
+				means[c].z/=clusters[c].size(); 
 			}
 			// cerr<<c<<" --> "<< means[c].x <<" " <<means[c].y <<" "<< means[c].z<<endl;
 			else{
-				if (rand()%2==0){
+				if (rand()%5!=0){
 					int max_dist_point;
 					float max_dist=-1;
 					for (int i=0;i<n;i++){

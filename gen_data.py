@@ -5,20 +5,20 @@ import sys
 
 dataset = []
 k = int(sys.argv[1] )
+point_per_cluster=100
 x_l = []
 y_l = []
 z_l = []
 
 coord_range = 1000
-dev_range = 10
+dev_range = 200
 
 f = open("test" + str(k) + ".txt","w")
 g = open("solution" + str(k) +".txt","w")
+f.write("%d %d\n"%(point_per_cluster*k, k))
 for i in range(k):
 	x,y,z = random.randint(-coord_range,coord_range), random.randint(-coord_range,coord_range), random.randint(-coord_range,coord_range)
-	n = random.randint(10,20)
-	print(n)
-	for i in range(n):
+	for i in range(point_per_cluster):
 		p_x,p_y,p_z = random.randint(-dev_range,dev_range), random.randint(-dev_range,dev_range), random.randint(-dev_range,dev_range)
 		f.write("%d %d %d\n"%(x+p_x,y+p_y,z+p_z))
 		g.write("%d %d %d\n"%(x+p_x,y+p_y,z+p_z))
