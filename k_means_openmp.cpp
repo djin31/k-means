@@ -13,6 +13,7 @@ struct coord{
 
 
 vector<coord> dataset;
+vector<vector<coord>> clusters;
 
 int k=0;
 int n=0;
@@ -39,7 +40,7 @@ void set_min_max(){
 	}
 }
 
-vector<vector<coord>> k_means_seq(){
+void k_means(){
 
 	set_min_max();
 
@@ -56,7 +57,8 @@ vector<vector<coord>> k_means_seq(){
 	}
 
 	vector<pair<int,float>> nearest_mean = vector<pair<int,float>>(n);
-	
+	float temp_dist, min_dist;
+	int min_dist_mean;	
 
 	coord temp_mean;
 
@@ -69,10 +71,8 @@ vector<vector<coord>> k_means_seq(){
 	for (int iter=0; iter<max_iter;iter++){
 
 		// Assign nearest mean to each point
-		#pragma omp parallel for num_threads(2)		
-		for (int p=0;p<n; p++){
-			float temp_dist, min_dist;
-			int min_dist_mean;
+		#pragma omp parallel for schedule(static,250) private(temp_dist, min_dist, min_dist_mean)		
+		for (int p=0;p<n; p++){			
 			min_dist = INT_MAX;
 			min_dist_mean = -1;
 			for(int m=0; m<k; m++){
@@ -84,7 +84,6 @@ vector<vector<coord>> k_means_seq(){
 			} 
 			nearest_mean[p].first = min_dist_mean;
 			nearest_mean[p].second = min_dist;
-			cluster_count[min_dist_mean]++;
 		}
 
 		//  Calculate new means
@@ -94,10 +93,10 @@ vector<vector<coord>> k_means_seq(){
 			means[m].z = 0;
 		}
 
-		// This should not be parallelised ideally since it is critical section, 
-		// but cost of missing on updates is less so parallelised
-		#pragma omp parallel for num_threads(2)
+		// This should not be parallelised ideally since it is critical section
+		// #pragma omp parallel for schedule(static,250) 
 		for (int p = 0; p<n; p++){
+			cluster_count[nearest_mean[p].first]++;
 			means[nearest_mean[p].first].x +=dataset[p].x;
 			means[nearest_mean[p].first].y +=dataset[p].y;
 			means[nearest_mean[p].first].z +=dataset[p].z;
@@ -139,11 +138,11 @@ vector<vector<coord>> k_means_seq(){
 		// cerr<<endl;
 	}
 
-	vector<vector<coord>> clusters = vector<vector<coord>>(k);
+	clusters = vector<vector<coord>>(k);
 	for (int p=0; p<n; p++){
 		clusters[nearest_mean[p].first].push_back(dataset[p]);
 	}
-	return clusters;
+	
 }
 
 int main(int argc, char const *argv[])
@@ -162,7 +161,8 @@ int main(int argc, char const *argv[])
 		dataset[r]=point;
 		r++;
 	}
-	vector<vector<coord>> clusters =k_means_seq();
+
+	k_means();
 
 	cerr<<"Cluster sizes are\n";
 	for (auto c: clusters){

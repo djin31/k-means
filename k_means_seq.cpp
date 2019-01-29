@@ -56,7 +56,8 @@ vector<vector<coord>> k_means_seq(){
 	}
 
 	vector<pair<int,float>> nearest_mean = vector<pair<int,float>>(n);
-	
+	float temp_dist, min_dist;
+	int min_dist_mean;
 
 	coord temp_mean;
 
@@ -70,8 +71,7 @@ vector<vector<coord>> k_means_seq(){
 
 		// Assign nearest mean to each point
 		for (int p=0;p<n; p++){
-			float temp_dist, min_dist;
-			int min_dist_mean;
+
 			min_dist = INT_MAX;
 			min_dist_mean = -1;
 			for(int m=0; m<k; m++){
