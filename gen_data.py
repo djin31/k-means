@@ -13,7 +13,7 @@ z_l = []
 points = set()
 
 coord_range = 1000
-dev_range = 100
+dev_range = 200
 
 f = open("test" + str(k) + ".txt","w")
 g = open("solution" + str(k) +".txt","w")
@@ -32,9 +32,10 @@ for i in range(k):
 f.write("%d %d\n"%(len(points), k))
 for i in points:
 	f.write("%d %d %d\n" %(i[0],i[1],i[2]))
-
+f.close()
 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 ax.scatter(x_l,y_l,z_l,"o")
 plt.show()
+plt.savefig("testplot.jpg")
