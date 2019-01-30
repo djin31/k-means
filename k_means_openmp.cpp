@@ -67,8 +67,14 @@ void k_means(){
 	// }
 	// cerr<<endl;
 
+	bool mean_jump = true;
 	for (int iter=0; iter<max_iter;iter++){
-
+		if (!mean_jump){
+			cerr<<"Convergence at iter "<<iter<<endl;
+			break;
+		}
+		mean_jump = false;
+		
 		// Assign nearest mean to each point
 		#pragma omp parallel for schedule(static,250) private(temp_dist, min_dist, min_dist_mean, update_mean)		
 		for (int p=0;p<n; p++){			
@@ -84,6 +90,9 @@ void k_means(){
 			} 
 
 			update_mean = &nearest_mean[p];
+			if (update_mean->first!=min_dist_mean){
+				mean_jump=true;
+			}
 			update_mean->first = min_dist_mean;
 			update_mean->second = min_dist;
 		}

@@ -19,7 +19,7 @@ struct coord{
 vector<coord> dataset;
 vector<pair<int,float>> nearest_mean;
 vector<coord> means;
-
+bool mean_jump;
 
 int k=0;
 int n=0;
@@ -70,8 +70,10 @@ void* assign_means(void *threadId){
 				min_dist_mean = m;
 			}
 		} 
-
 		update_mean = &nearest_mean[p];
+		if (update_mean->first!=min_dist_mean){
+			mean_jump=true;
+		}
 		update_mean->first = min_dist_mean;
 		update_mean->second = min_dist;
 	}
@@ -100,7 +102,13 @@ void k_means(){
 		tids[i]=i;
 	}
 
+	mean_jump=true;
 	for (int iter=0; iter<max_iter;iter++){
+		if (!mean_jump){
+			cerr<<"Convergence at iter "<<iter<<endl;
+			break;
+		}
+		mean_jump = false;
 
 		// Assign nearest mean to each point
 		for( int i = 0; i < NUM_THREADS; i++ ){

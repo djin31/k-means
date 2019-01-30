@@ -5,7 +5,7 @@ import sys
 
 dataset = []
 k = int(sys.argv[1] )
-point_per_cluster=5000
+point_per_cluster=500
 x_l = []
 y_l = []
 z_l = []
