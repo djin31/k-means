@@ -9,6 +9,8 @@
 
 using namespace std;
 
+#define NUM_THREADS 4
+
 struct coord{
 	float x,y,z;
 };
@@ -16,10 +18,13 @@ struct coord{
 
 vector<coord> dataset;
 vector<pair<int,float>> nearest_mean;
+vector<coord> means;
 
 
 int k=0;
 int n=0;
+int points_per_thread;
+
 int max_iter = 1000;
 
 float max_x = INT_MIN, max_y = INT_MIN, max_z = INT_MIN;
@@ -41,6 +46,37 @@ void set_min_max(){
 	}
 }
 
+
+void* assign_means(void *threadId){
+	int *tid = (int *)threadId;
+	int start = points_per_thread*(*tid);
+	int end = start+points_per_thread;
+	if (*tid==(NUM_THREADS-1)){
+		end = n;
+	}
+
+	float min_dist, temp_dist;
+	int min_dist_mean;
+	pair<int, float> * update_mean;
+
+	for (int p=start;p<end; p++){			
+		min_dist = INT_MAX;
+		min_dist_mean = -1;
+		coord *point = &dataset[p];
+		for(int m=0; m<k; m++){
+			temp_dist = get_distance(point,&means[m]);
+			if (temp_dist<min_dist){
+				min_dist = temp_dist;
+				min_dist_mean = m;
+			}
+		} 
+
+		update_mean = &nearest_mean[p];
+		update_mean->first = min_dist_mean;
+		update_mean->second = min_dist;
+	}
+}
+
 void k_means(){
 
 	// set_min_max();
@@ -49,44 +85,29 @@ void k_means(){
 	random_shuffle(dataset.begin(), dataset.end());
 
 	int cluster_count[n] = {};
-	coord means[n];
 	for (int i=0; i<k; i++){
 		means[i].x=dataset[i].x;
 		means[i].y=dataset[i].y;
 		means[i].z=dataset[i].z;
 	}
 
-	float temp_dist, min_dist;
-	int min_dist_mean;	
 	coord *temp_mean;
-	pair<int, float> * update_mean;
 
-	// cerr<<"Init means are\n";
-	// for (int m=0;m<k;m++){
-	// 	cerr<<m<<" --> "<< means[m].x <<" " <<means[m].y <<" "<< means[m].z<<endl;
-	// }
-	// cerr<<endl;
+	// setting up threads
+	pthread_t threads[NUM_THREADS];
+	int tids[NUM_THREADS];
+	for (int i=0;i<NUM_THREADS;i++){
+		tids[i]=i;
+	}
 
 	for (int iter=0; iter<max_iter;iter++){
 
 		// Assign nearest mean to each point
-		#pragma omp parallel for schedule(static,250) private(temp_dist, min_dist, min_dist_mean, update_mean)		
-		for (int p=0;p<n; p++){			
-			min_dist = INT_MAX;
-			min_dist_mean = -1;
-			coord *point = &dataset[p];
-			for(int m=0; m<k; m++){
-				temp_dist = get_distance(point,means+m);
-				if (temp_dist<min_dist){
-					min_dist = temp_dist;
-					min_dist_mean = m;
-				}
-			} 
-
-			update_mean = &nearest_mean[p];
-			update_mean->first = min_dist_mean;
-			update_mean->second = min_dist;
+		for( int i = 0; i < NUM_THREADS; i++ ){
+			pthread_create(&threads[i], NULL, assign_means, (void *)&tids[i]);
 		}
+		for (int i =0; i < NUM_THREADS; i ++)
+      		pthread_join(threads[i], NULL);
 
 		//  Calculate new means
 		for(int m=0; m<k; m++){
@@ -94,16 +115,14 @@ void k_means(){
 			means[m].y = 0;
 			means[m].z = 0;
 		}
-
-		// This should not be parallelised ideally since it is critical section
-		// #pragma omp parallel for schedule(static,250) 
+ 
 		for (int p = 0; p<n; p++){
 			cluster_count[nearest_mean[p].first]++;
-			temp_mean = means + nearest_mean[p].first;
+			temp_mean = &means[nearest_mean[p].first];
 			temp_mean->x +=dataset[p].x;
 			temp_mean->y +=dataset[p].y;
 			temp_mean->z +=dataset[p].z;
-		}		
+		}	
 
 		for (int m=0; m<k; m++){
 			if (cluster_count[m]!=0){
@@ -159,7 +178,10 @@ int main(int argc, char const *argv[])
 		r++;
 	}
 
+	points_per_thread = n/NUM_THREADS;
 	nearest_mean = vector<pair<int, float>>(n);
+	means = vector<coord>(k);
+
 	double start = omp_get_wtime();
 	k_means();
 	cerr<<"k means time "<<omp_get_wtime()-start<<"s"<<endl;

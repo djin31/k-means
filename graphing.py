@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D 
 import numpy
 from itertools import cycle
-cycol = cycle('bgrcmk')
+cycol = cycle('bgrcmkyw')
 
 f = open(sys.argv[1])
 
@@ -21,7 +21,6 @@ for i in l:
 		cluster = []	
 
 	else:
-		print (i.strip())
 		x,y,z = i.strip().split(" ")
 		cluster.append([x,y,z])
 plt.show()

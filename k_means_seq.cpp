@@ -5,6 +5,8 @@
 #include <vector>       
 #include <ctime>        
 #include <cstdlib>
+#include <omp.h>
+
 using namespace std;
 
 struct coord{
@@ -13,18 +15,18 @@ struct coord{
 
 
 vector<coord> dataset;
+vector<pair<int,float>> nearest_mean;
+
 
 int k=0;
 int n=0;
 int max_iter = 1000;
 
-int reinit_param = 10;
-
 float max_x = INT_MIN, max_y = INT_MIN, max_z = INT_MIN;
 float min_x = INT_MAX, min_y = INT_MAX, min_z = INT_MAX;
 
-int get_distance(coord a, coord b){
-	return ((a.x-b.x)*(a.x-b.x) + (a.y-b.y)*(a.y-b.y) + (a.z-b.z)*(a.z-b.z));
+inline float get_distance(coord *a, coord *b){
+	return ((a->x-b->x)*(a->x-b->x) + (a->y-b->y)*(a->y-b->y) + (a->z-b->z)*(a->z-b->z));
 }
 
 void set_min_max(){
@@ -39,15 +41,14 @@ void set_min_max(){
 	}
 }
 
-vector<vector<coord>> k_means_seq(){
+void k_means(){
 
-	set_min_max();
+	// set_min_max();
 
 	// Shuffle dataset and pick initial k points as initial means
-	// random_shuffle(dataset.begin(),dataset.end());
 	random_shuffle(dataset.begin(), dataset.end());
 
-	vector<int> cluster_count = vector<int>(n,0);
+	int cluster_count[n] = {};
 	coord means[n];
 	for (int i=0; i<k; i++){
 		means[i].x=dataset[i].x;
@@ -55,35 +56,35 @@ vector<vector<coord>> k_means_seq(){
 		means[i].z=dataset[i].z;
 	}
 
-	vector<pair<int,float>> nearest_mean = vector<pair<int,float>>(n);
 	float temp_dist, min_dist;
-	int min_dist_mean;
+	int min_dist_mean;	
+	coord *temp_mean;
+	pair<int, float> * update_mean;
 
-	coord temp_mean;
-
-	cerr<<"Init means are\n";
-	for (int m=0;m<k;m++){
-		cerr<<m<<" --> "<< means[m].x <<" " <<means[m].y <<" "<< means[m].z<<endl;
-	}
-	cerr<<endl;
+	// cerr<<"Init means are\n";
+	// for (int m=0;m<k;m++){
+	// 	cerr<<m<<" --> "<< means[m].x <<" " <<means[m].y <<" "<< means[m].z<<endl;
+	// }
+	// cerr<<endl;
 
 	for (int iter=0; iter<max_iter;iter++){
 
 		// Assign nearest mean to each point
-		for (int p=0;p<n; p++){
-
+		for (int p=0;p<n; p++){			
 			min_dist = INT_MAX;
 			min_dist_mean = -1;
+			coord *point = &dataset[p];
 			for(int m=0; m<k; m++){
-				temp_dist = get_distance(dataset[p],means[m]);
+				temp_dist = get_distance(point,means+m);
 				if (temp_dist<min_dist){
 					min_dist = temp_dist;
 					min_dist_mean = m;
 				}
 			} 
-			nearest_mean[p].first = min_dist_mean;
-			nearest_mean[p].second = min_dist;
-			cluster_count[min_dist_mean]++;
+
+			update_mean = &nearest_mean[p];
+			update_mean->first = min_dist_mean;
+			update_mean->second = min_dist;
 		}
 
 		//  Calculate new means
@@ -92,11 +93,13 @@ vector<vector<coord>> k_means_seq(){
 			means[m].y = 0;
 			means[m].z = 0;
 		}
-
+ 
 		for (int p = 0; p<n; p++){
-			means[nearest_mean[p].first].x +=dataset[p].x;
-			means[nearest_mean[p].first].y +=dataset[p].y;
-			means[nearest_mean[p].first].z +=dataset[p].z;
+			cluster_count[nearest_mean[p].first]++;
+			temp_mean = means + nearest_mean[p].first;
+			temp_mean->x +=dataset[p].x;
+			temp_mean->y +=dataset[p].y;
+			temp_mean->z +=dataset[p].z;
 		}	
 
 		for (int m=0; m<k; m++){
@@ -106,7 +109,7 @@ vector<vector<coord>> k_means_seq(){
 				means[m].z/=cluster_count[m];
 			}
 			else{
-				if (rand()%2==0){
+				if (1){
 					int max_dist_point;
 					float max_dist=-1;
 					for (int i=0;i<n;i++){
@@ -124,7 +127,6 @@ vector<vector<coord>> k_means_seq(){
 					means[m].x = rand()%(int)(max_x-min_x) + min_x;
 					means[m].z = rand()%(int)(max_z-min_z) + min_z;
 				}
-
 			}
 		}
 		// cerr<<"Cluster sizes are\n";
@@ -134,13 +136,7 @@ vector<vector<coord>> k_means_seq(){
 			cluster_count[c]=0;
 		}
 		// cerr<<endl;
-	}
-
-	vector<vector<coord>> clusters = vector<vector<coord>>(k);
-	for (int p=0; p<n; p++){
-		clusters[nearest_mean[p].first].push_back(dataset[p]);
-	}
-	return clusters;
+	}	
 }
 
 int main(int argc, char const *argv[])
@@ -159,7 +155,17 @@ int main(int argc, char const *argv[])
 		dataset[r]=point;
 		r++;
 	}
-	vector<vector<coord>> clusters =k_means_seq();
+
+	nearest_mean = vector<pair<int, float>>(n);
+	double start = omp_get_wtime();
+	k_means();
+	cerr<<"k means time "<<omp_get_wtime()-start<<"s"<<endl;
+
+	// forms clusters from nearest mean
+	vector<vector<coord>> clusters = vector<vector<coord>>(k);
+	for (int p=0; p<n; p++){
+		clusters[nearest_mean[p].first].push_back(dataset[p]);
+	}
 
 	cerr<<"Cluster sizes are\n";
 	for (auto c: clusters){
