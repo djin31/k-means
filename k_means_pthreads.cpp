@@ -81,8 +81,6 @@ void* assign_means(void *threadId){
 
 void k_means(){
 
-	// set_min_max();
-
 	// Shuffle dataset and pick initial k points as initial means
 	random_shuffle(dataset.begin(), dataset.end());
 
@@ -139,39 +137,30 @@ void k_means(){
 				means[m].z/=cluster_count[m];
 			}
 			else{
-				if (1){
-					int max_dist_point;
-					float max_dist=-1;
-					for (int i=0;i<n;i++){
-						if (nearest_mean[i].second>max_dist){
-							max_dist_point = i;
-							max_dist = nearest_mean[i].second;
-						}
+				// assign point which is at max distance from its mean as new mean if one of the clusters become empty
+				int max_dist_point;
+				float max_dist=-1;
+				for (int i=0;i<n;i++){
+					if (nearest_mean[i].second>max_dist){
+						max_dist_point = i;
+						max_dist = nearest_mean[i].second;
 					}
-					means[m] = dataset[max_dist_point];
-					nearest_mean[max_dist_point].second = 0;
-					nearest_mean[max_dist_point].first  = m;
 				}
-				else{
-					means[m].y = rand()%(int)(max_y-min_y) + min_y;
-					means[m].x = rand()%(int)(max_x-min_x) + min_x;
-					means[m].z = rand()%(int)(max_z-min_z) + min_z;
-				}
+				means[m] = dataset[max_dist_point];
+				nearest_mean[max_dist_point].second = 0;
 			}
 		}
-		// cerr<<"Cluster sizes are\n";
+
 		for (int c=0; c<k; c++){
 			if (cluster_count[c]==0)
 				cerr<<"Found zero size cluster on iter"<<iter<<endl;
 			cluster_count[c]=0;
 		}
-		// cerr<<endl;
 	}	
 }
 
 int main(int argc, char const *argv[])
 {	
-	// srand(time(NULL));
 	srand(3120);
 	ifstream data;
 	data.open(argv[1]);
